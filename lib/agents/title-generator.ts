@@ -1,7 +1,6 @@
 import { generateText } from 'ai'
 
 import { getModel } from '../utils/registry'
-import { isTracingEnabled } from '../utils/telemetry'
 
 interface GenerateChatTitleParams {
   userMessageContent: string
@@ -34,16 +33,12 @@ export async function generateChatTitle({
       prompt: userMessageContent,
       abortSignal,
       experimental_telemetry: {
-        isEnabled: isTracingEnabled(),
+        isEnabled: false,
         functionId: 'title-generation',
         metadata: {
           modelId: modelId,
           agentType: 'title-generator',
-          promptLength: userMessageContent.length,
-          ...(parentTraceId && {
-            langfuseTraceId: parentTraceId,
-            langfuseUpdateParent: false
-          })
+          promptLength: userMessageContent.length
         }
       }
     })

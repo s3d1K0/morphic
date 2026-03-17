@@ -270,7 +270,7 @@ export function Chat({
     } else {
       setIsAtBottom(false)
     }
-  }, [messages])
+  }, [messages.length])
 
   // Scroll to the section when a new user message is sent
   useEffect(() => {
@@ -290,7 +290,7 @@ export function Chat({
         })
       }
     }
-  }, [sections, messages, chatId])
+  }, [sections.length, messages.length, chatId])
 
   const onQuerySelect = (query: string) => {
     sendMessage({

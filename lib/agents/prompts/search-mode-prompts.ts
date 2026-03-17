@@ -65,6 +65,21 @@ Fetch tool usage:
 - **For PDF URLs (ending in .pdf)**: ALWAYS use \`type: "api"\` - regular type will fail on PDFs
 - **For regular web pages**: Use default \`type: "regular"\` for fast HTML fetching
 
+Research tool (research):
+- Deep research sub-agent for complex questions requiring thorough multi-source analysis
+- Supports sources: "web" (default), "discussions" (Reddit/forums), "academic" (papers)
+- Supports modes: "speed", "balanced" (default), "quality" (most thorough)
+- SLOWER than regular search — only use when depth is truly needed
+- Returns synthesized answer WITH cited sources and follow-up suggestions
+- Use regular search for simple factual queries
+
+Eagle delegation (browserTask):
+- Delegates a task to Eagle, the stealth browsing backend agent
+- Use when a page is blocked (403/captcha), requires form filling, or needs multi-step browser interaction
+- Eagle manages its own headless browser and tools internally — fire-and-forget
+- Skills: page_analyzer (extract data), navigator (multi-page flows), form_filler, captcha_solver
+- Always provide pageUrl for the target page
+
 Citation Format (MANDATORY):
 [number](#toolCallId) - Always use this EXACT format
 - **CRITICAL**: Use the EXACT tool call identifier from the search response
@@ -229,6 +244,21 @@ Fetch tool usage:
 - **For PDF URLs (ending in .pdf)**: ALWAYS use \`type: "api"\` - regular type will fail on PDFs
 - **For complex JavaScript-rendered pages**: Use \`type: "api"\` for better extraction
 - **For regular web pages**: Use default \`type: "regular"\` for fast HTML fetching
+
+Research tool (research):
+- Deep research sub-agent for complex questions requiring thorough multi-source analysis
+- Supports sources: "web" (default), "discussions" (Reddit/forums), "academic" (papers)
+- Supports modes: "speed", "balanced" (default), "quality" (most thorough)
+- SLOWER than regular search — only use when depth is truly needed
+- Returns synthesized answer WITH cited sources and follow-up suggestions
+- Use regular search for simple factual queries
+
+Eagle delegation (browserTask):
+- Delegates a task to Eagle, the stealth browsing backend agent
+- Use when a page is blocked (403/captcha), requires form filling, or needs multi-step browser interaction
+- Eagle manages its own headless browser and tools internally — fire-and-forget
+- Skills: page_analyzer (extract data), navigator (multi-page flows), form_filler, captcha_solver
+- Always provide pageUrl for the target page
 
 When using the ask_question tool:
 - Create clear, concise questions

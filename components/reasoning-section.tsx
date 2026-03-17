@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type { ReasoningPart } from '@ai-sdk/provider-utils'
+import { BrainCircuit } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 
@@ -40,6 +41,20 @@ export function ReasoningSection({
   isLast = false
 }: ReasoningSectionProps) {
   const { open } = useArtifact()
+  const wasDone = useRef(false)
+
+  // Auto-collapse when thinking ends
+  useEffect(() => {
+    if (content.isDone && !wasDone.current) {
+      wasDone.current = true
+      // Small delay so the user can see the final reasoning before collapsing
+      const timer = setTimeout(() => {
+        onOpenChange(false)
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [content.isDone, onOpenChange])
+
   // Show a short preview when collapsed; switch to a generic label when expanded
   const HEADER_PREVIEW_CHARS = 120
   const SANITIZE_MARKDOWN_PREVIEW = true
@@ -93,7 +108,12 @@ export function ReasoningSection({
             </span>
           </div>
         ) : (
-          headerLabel
+          <div className="flex items-center gap-2 min-w-0">
+            <BrainCircuit className="size-4 shrink-0 text-purple-500" />
+            <span className="truncate block min-w-0 max-w-full">
+              {headerLabel}
+            </span>
+          </div>
         )
       }
       onInspect={() =>

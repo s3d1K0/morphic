@@ -74,7 +74,8 @@ export function ArtifactProvider({ children }: { children: ReactNode }) {
     if (sidebarOpen && state.isOpen) {
       close()
     }
-  }, [sidebarOpen, state.isOpen, close])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- close is stable (empty deps useCallback)
+  }, [sidebarOpen, state.isOpen])
 
   const open = (part: Part) => {
     dispatch({ type: 'OPEN', payload: part })

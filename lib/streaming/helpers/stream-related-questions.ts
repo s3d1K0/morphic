@@ -72,8 +72,25 @@ export async function streamRelatedQuestions(
           parsedQuestions.error
         )
       }
-    } catch (error) {
+    } catch (error: any) {
       console.warn('Error retrieving final related questions object:', error)
+      // Fallback: extract questions from plain text when model doesn't output JSON
+      if (
+        finalQuestions.length === 0 &&
+        error?.text &&
+        typeof error.text === 'string'
+      ) {
+        const lines = (error.text as string).split('\n')
+        for (const line of lines) {
+          // Match numbered questions like "1. **Question?**" or "1. Question?"
+          const match = line.match(
+            /^\d+\.\s+\*{0,2}(.+?)\*{0,2}\s*$/
+          )
+          if (match) {
+            finalQuestions.push({ question: match[1].trim() })
+          }
+        }
+      }
     }
 
     writer.write({

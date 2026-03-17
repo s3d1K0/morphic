@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server'
 
-import { Redis } from '@upstash/redis'
 import http from 'http'
 import { Agent } from 'http'
 import https from 'https'
 import { JSDOM, VirtualConsole } from 'jsdom'
-import { createClient } from 'redis'
 
 import {
   SearchResultItem,
@@ -24,115 +22,25 @@ const SEARXNG_MAX_RESULTS = Math.max(
   Math.min(100, parseInt(process.env.SEARXNG_MAX_RESULTS || '50', 10))
 )
 
-const CACHE_TTL = 3600 // Cache time-to-live in seconds (1 hour)
-const CACHE_EXPIRATION_CHECK_INTERVAL = 3600000 // 1 hour in milliseconds
+const CACHE_TTL = 3600 * 1000 // Cache time-to-live in milliseconds (1 hour)
 
-let redisClient: Redis | ReturnType<typeof createClient> | null = null
+// In-memory cache (suitable for local single-instance deployments)
+const memoryCache = new Map<string, { data: SearXNGSearchResults; expiry: number }>()
 
-// Initialize Redis client based on environment variables
-async function initializeRedisClient() {
-  if (redisClient) return redisClient
-
-  const upstashRedisRestUrl = process.env.UPSTASH_REDIS_REST_URL
-  const upstashRedisRestToken = process.env.UPSTASH_REDIS_REST_TOKEN
-
-  // Use Upstash Redis if credentials are provided
-  if (upstashRedisRestUrl && upstashRedisRestToken) {
-    redisClient = new Redis({
-      url: upstashRedisRestUrl,
-      token: upstashRedisRestToken
-    })
-    return redisClient
+function getCachedResults(cacheKey: string): SearXNGSearchResults | null {
+  const entry = memoryCache.get(cacheKey)
+  if (entry && entry.expiry > Date.now()) {
+    return entry.data
   }
-
-  // Otherwise, try to use local Redis (for Docker/SearXNG usage)
-  try {
-    const localRedisUrl =
-      process.env.LOCAL_REDIS_URL || 'redis://localhost:6379'
-    const client = createClient({ url: localRedisUrl })
-    await client.connect()
-    redisClient = client
-  } catch (error) {
-    console.warn(
-      'Failed to connect to local Redis. Advanced search caching disabled.',
-      error
-    )
-    redisClient = null
+  if (entry) {
+    memoryCache.delete(cacheKey)
   }
-
-  return redisClient
+  return null
 }
 
-// Function to get cached results
-async function getCachedResults(
-  cacheKey: string
-): Promise<SearXNGSearchResults | null> {
-  try {
-    const client = await initializeRedisClient()
-    if (!client) return null
-
-    let cachedData: string | null
-    if (client instanceof Redis) {
-      cachedData = await client.get(cacheKey)
-    } else {
-      cachedData = await client.get(cacheKey)
-    }
-
-    if (cachedData) {
-      console.log(`Cache hit for key: ${cacheKey}`)
-      return JSON.parse(cachedData)
-    } else {
-      console.log(`Cache miss for key: ${cacheKey}`)
-      return null
-    }
-  } catch (error) {
-    console.error('Redis cache error:', error)
-    return null
-  }
+function setCachedResults(cacheKey: string, results: SearXNGSearchResults): void {
+  memoryCache.set(cacheKey, { data: results, expiry: Date.now() + CACHE_TTL })
 }
-
-// Function to set cached results with error handling and logging
-async function setCachedResults(
-  cacheKey: string,
-  results: SearXNGSearchResults
-): Promise<void> {
-  try {
-    const client = await initializeRedisClient()
-    if (!client) return
-
-    const serializedResults = JSON.stringify(results)
-    if (client instanceof Redis) {
-      await client.set(cacheKey, serializedResults, { ex: CACHE_TTL })
-    } else {
-      await client.set(cacheKey, serializedResults, { EX: CACHE_TTL })
-    }
-    console.log(`Cached results for key: ${cacheKey}`)
-  } catch (error) {
-    console.error('Redis cache error:', error)
-  }
-}
-
-// Function to periodically clean up expired cache entries
-async function cleanupExpiredCache() {
-  try {
-    const client = await initializeRedisClient()
-    if (!client) return
-
-    const keys = await client.keys('search:*')
-    for (const key of keys) {
-      const ttl = await client.ttl(key)
-      if (ttl <= 0) {
-        await client.del(key)
-        console.log(`Removed expired cache entry: ${key}`)
-      }
-    }
-  } catch (error) {
-    console.error('Cache cleanup error:', error)
-  }
-}
-
-// Set up periodic cache cleanup
-setInterval(cleanupExpiredCache, CACHE_EXPIRATION_CHECK_INTERVAL)
 
 export async function POST(request: Request) {
   const { query, maxResults, searchDepth, includeDomains, excludeDomains } =
@@ -146,7 +54,7 @@ export async function POST(request: Request) {
     }:${Array.isArray(excludeDomains) ? excludeDomains.join(',') : ''}`
 
     // Try to get cached results
-    const cachedResults = await getCachedResults(cacheKey)
+    const cachedResults = getCachedResults(cacheKey)
     if (cachedResults) {
       return NextResponse.json(cachedResults)
     }
@@ -161,7 +69,7 @@ export async function POST(request: Request) {
     )
 
     // Cache the results
-    await setCachedResults(cacheKey, results)
+    setCachedResults(cacheKey, results)
 
     return NextResponse.json(results)
   } catch (error) {

@@ -2,16 +2,15 @@
 
 import { createContext, useContext } from 'react'
 
-const UserContext = createContext(false)
+const UserContext = createContext(true)
 
 export function UserProvider({
-  hasUser,
   children
 }: {
-  hasUser: boolean
+  hasUser?: boolean
   children: React.ReactNode
 }) {
-  return <UserContext.Provider value={hasUser}>{children}</UserContext.Provider>
+  return <UserContext.Provider value={true}>{children}</UserContext.Provider>
 }
 
 export function useHasUser() {

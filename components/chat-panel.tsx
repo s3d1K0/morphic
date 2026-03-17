@@ -295,9 +295,7 @@ export function ChatPanel({
                   <MessageCirclePlus className="size-4 group-hover:rotate-12 transition-all" />
                 </Button>
               )}
-              {process.env.NEXT_PUBLIC_MORPHIC_CLOUD_DEPLOYMENT !== 'true' && (
-                <ModelTypeSelector disabled={isGuest} />
-              )}
+              <ModelTypeSelector disabled={isGuest} />
               <Button
                 type={isLoading ? 'button' : 'submit'}
                 size={'icon'}

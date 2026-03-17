@@ -3,7 +3,6 @@ import { type ModelMessage, Output, streamText } from 'ai'
 import { getRelatedQuestionsModel } from '../config/model-types'
 import { relatedQuestionSchema } from '../schema/related'
 import { getModel } from '../utils/registry'
-import { isTracingEnabled } from '../utils/telemetry'
 
 import { RELATED_QUESTIONS_PROMPT } from './prompts/related-questions-prompt'
 
@@ -34,16 +33,12 @@ export function createRelatedQuestionsStream(
     ],
     abortSignal,
     experimental_telemetry: {
-      isEnabled: isTracingEnabled(),
+      isEnabled: false,
       functionId: 'related-questions',
       metadata: {
         modelId,
         agentType: 'related-questions-generator',
-        messageCount: messages.length,
-        ...(parentTraceId && {
-          langfuseTraceId: parentTraceId,
-          langfuseUpdateParent: false
-        })
+        messageCount: messages.length
       }
     }
   })

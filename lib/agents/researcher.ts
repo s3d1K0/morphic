@@ -10,7 +10,6 @@ import { createSearchTool } from '../tools/search'
 import { createTodoTools } from '../tools/todo'
 import { SearchMode } from '../types/search'
 import { getModel } from '../utils/registry'
-import { isTracingEnabled } from '../utils/telemetry'
 
 import {
   getAdaptiveModePrompt,
@@ -134,16 +133,12 @@ export function createResearcher({
         providerOptions: modelConfig.providerOptions
       }),
       experimental_telemetry: {
-        isEnabled: isTracingEnabled(),
+        isEnabled: false,
         functionId: 'research-agent',
         metadata: {
           modelId: model,
           agentType: 'researcher',
-          searchMode,
-          ...(parentTraceId && {
-            langfuseTraceId: parentTraceId,
-            langfuseUpdateParent: false
-          })
+          searchMode
         }
       }
     })

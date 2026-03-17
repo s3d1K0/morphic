@@ -1,31 +1,27 @@
-import { S3Client } from '@aws-sdk/client-s3'
+import * as fs from 'fs'
+import * as path from 'path'
 
-export const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || 'user-uploads'
-export const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || ''
+const UPLOAD_DIR = process.env.UPLOAD_DIR || '/data/uploads'
 
-let _r2Client: S3Client | null = null
+export function getUploadDir(): string {
+  if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true })
+  }
+  return UPLOAD_DIR
+}
 
-export function getR2Client(): S3Client {
-  if (_r2Client) {
-    return _r2Client
+export async function saveFile(
+  buffer: Buffer,
+  filePath: string,
+  _contentType: string
+): Promise<string> {
+  const fullPath = path.join(getUploadDir(), filePath)
+  const dir = path.dirname(fullPath)
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
   }
 
-  const accountId = process.env.R2_ACCOUNT_ID
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
-
-  if (!accountId || !accessKeyId || !secretAccessKey) {
-    throw new Error('R2 configuration missing')
-  }
-
-  _r2Client = new S3Client({
-    region: 'auto',
-    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
-    credentials: {
-      accessKeyId,
-      secretAccessKey
-    }
-  })
-
-  return _r2Client
+  fs.writeFileSync(fullPath, buffer)
+  return `/uploads/${filePath}`
 }

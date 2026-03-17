@@ -4,8 +4,10 @@ import { UseChatHelpers } from '@ai-sdk/react'
 
 import type { ToolPart, UIDataTypes, UIMessage, UITools } from '@/lib/types/ai'
 
+import { EagleTaskSection } from './eagle-task-section'
 import FetchSection from './fetch-section'
 import { QuestionConfirmation } from './question-confirmation'
+import { ResearchSection } from './research-section'
 import { SearchSection } from './search-section'
 import { ToolTodoDisplay } from './tool-todo-display'
 
@@ -106,6 +108,30 @@ export function ToolSection({
           toolCallId={tool.toolCallId}
           isOpen={isOpen}
           onOpenChange={onOpenChange}
+          borderless={borderless}
+          isFirst={isFirst}
+          isLast={isLast}
+        />
+      )
+    case 'tool-research':
+      return (
+        <ResearchSection
+          tool={tool as ToolPart<'research'>}
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+          status={status}
+          borderless={borderless}
+          isFirst={isFirst}
+          isLast={isLast}
+        />
+      )
+    case 'tool-browserTask':
+      return (
+        <EagleTaskSection
+          tool={tool as ToolPart<'browserTask'>}
+          isOpen={isOpen}
+          onOpenChange={onOpenChange}
+          status={status}
           borderless={borderless}
           isFirst={isFirst}
           isLast={isLast}

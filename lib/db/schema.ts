@@ -6,7 +6,6 @@ import {
   integer,
   json,
   jsonb,
-  pgPolicy,
   pgTable,
   text,
   timestamp,
@@ -40,36 +39,19 @@ export const chats = pgTable(
       .default('private')
   },
   table => [
-    // Indexes
     index('chats_user_id_idx').on(table.userId),
     index('chats_user_id_created_at_idx').on(
       table.userId,
       table.createdAt.desc()
     ),
     index('chats_created_at_idx').on(table.createdAt.desc()),
-    // Composite index for RLS subqueries in messages and parts tables
-    index('chats_id_user_id_idx').on(table.id, table.userId),
-
-    // RLS Policies
-    pgPolicy('users_manage_own_chats', {
-      as: 'permissive',
-      for: 'all',
-      to: 'public',
-      using: sql`user_id = current_setting('app.current_user_id', true)`,
-      withCheck: sql`user_id = current_setting('app.current_user_id', true)`
-    }),
-    pgPolicy('public_chats_readable', {
-      as: 'permissive',
-      for: 'select',
-      to: 'public',
-      using: sql`visibility = 'public'`
-    })
+    index('chats_id_user_id_idx').on(table.id, table.userId)
   ]
-).enableRLS()
+)
 
 export type Chat = InferSelectModel<typeof chats>
 
-// Messages table (simplified)
+// Messages table
 export const messages = pgTable(
   'messages',
   {
@@ -86,36 +68,9 @@ export const messages = pgTable(
   },
   table => [
     index('messages_chat_id_idx').on(table.chatId),
-    index('messages_chat_id_created_at_idx').on(table.chatId, table.createdAt),
-
-    // RLS Policies - allow access to messages if user owns the chat
-    pgPolicy('users_manage_chat_messages', {
-      as: 'permissive',
-      for: 'all',
-      to: 'public',
-      using: sql`EXISTS (
-        SELECT 1 FROM ${chats}
-        WHERE ${chats}.id = chat_id
-        AND ${chats}.user_id = current_setting('app.current_user_id', true)
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM ${chats}
-        WHERE ${chats}.id = chat_id
-        AND ${chats}.user_id = current_setting('app.current_user_id', true)
-      )`
-    }),
-    pgPolicy('public_chat_messages_readable', {
-      as: 'permissive',
-      for: 'select',
-      to: 'public',
-      using: sql`EXISTS (
-        SELECT 1 FROM ${chats}
-        WHERE ${chats}.id = chat_id
-        AND ${chats}.visibility = 'public'
-      )`
-    })
+    index('messages_chat_id_created_at_idx').on(table.chatId, table.createdAt)
   ]
-).enableRLS()
+)
 
 export type Message = InferSelectModel<typeof messages>
 
@@ -169,7 +124,7 @@ export const parts = pgTable(
     tool_state: varchar('tool_state', { length: VARCHAR_LENGTH }),
     tool_errorText: text('tool_error_text'),
 
-    // Tool-specific columns (all Morphic tools)
+    // Tool-specific columns
     tool_search_input: json('tool_search_input').$type<any>(),
     tool_search_output: json('tool_search_output').$type<any>(),
     tool_fetch_input: json('tool_fetch_input').$type<any>(),
@@ -183,13 +138,13 @@ export const parts = pgTable(
     tool_todoRead_input: json('tool_todoRead_input').$type<any>(),
     tool_todoRead_output: json('tool_todoRead_output').$type<any>(),
 
-    // Dynamic tools (includes MCP and other runtime-defined tools)
+    // Dynamic tools
     tool_dynamic_input: json('tool_dynamic_input').$type<any>(),
     tool_dynamic_output: json('tool_dynamic_output').$type<any>(),
     tool_dynamic_name: varchar('tool_dynamic_name', { length: VARCHAR_LENGTH }),
     tool_dynamic_type: varchar('tool_dynamic_type', { length: VARCHAR_LENGTH }),
 
-    // Data parts (generic support)
+    // Data parts
     data_prefix: varchar('data_prefix', { length: VARCHAR_LENGTH }),
     data_content: json('data_content').$type<any>(),
     data_id: varchar('data_id', { length: VARCHAR_LENGTH }),
@@ -200,11 +155,9 @@ export const parts = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow()
   },
   table => [
-    // Indexes
     index('parts_message_id_idx').on(table.messageId),
     index('parts_message_id_order_idx').on(table.messageId, table.order),
 
-    // Constraints
     check('text_text_required', sql`(type != 'text' OR text_text IS NOT NULL)`),
     check(
       'reasoning_text_required',
@@ -221,39 +174,9 @@ export const parts = pgTable(
     check(
       'tool_fields_required',
       sql`(type NOT LIKE 'tool-%' OR (tool_tool_call_id IS NOT NULL AND tool_state IS NOT NULL))`
-    ),
-
-    // RLS Policies - allow access to parts if user owns the related chat
-    pgPolicy('users_manage_message_parts', {
-      as: 'permissive',
-      for: 'all',
-      to: 'public',
-      using: sql`EXISTS (
-        SELECT 1 FROM ${messages}
-        INNER JOIN ${chats} ON ${chats}.id = ${messages}.chat_id
-        WHERE ${messages}.id = message_id
-        AND ${chats}.user_id = current_setting('app.current_user_id', true)
-      )`,
-      withCheck: sql`EXISTS (
-        SELECT 1 FROM ${messages}
-        INNER JOIN ${chats} ON ${chats}.id = ${messages}.chat_id
-        WHERE ${messages}.id = message_id
-        AND ${chats}.user_id = current_setting('app.current_user_id', true)
-      )`
-    }),
-    pgPolicy('public_chat_parts_readable', {
-      as: 'permissive',
-      for: 'select',
-      to: 'public',
-      using: sql`EXISTS (
-        SELECT 1 FROM ${messages}
-        INNER JOIN ${chats} ON ${chats}.id = ${messages}.chat_id
-        WHERE ${messages}.id = message_id
-        AND ${chats}.visibility = 'public'
-      )`
-    })
+    )
   ]
-).enableRLS()
+)
 
 export type Part = InferSelectModel<typeof parts>
 export type NewPart = typeof parts.$inferInsert
@@ -276,25 +199,9 @@ export const feedback = pgTable(
     createdAt: timestamp('created_at').notNull().defaultNow()
   },
   table => [
-    // Indexes
     index('feedback_user_id_idx').on(table.userId),
-    index('feedback_created_at_idx').on(table.createdAt),
-
-    // RLS Policies - Allow reads (for INSERT ... RETURNING and app visibility)
-    pgPolicy('feedback_select_policy', {
-      as: 'permissive',
-      for: 'select',
-      to: 'public',
-      using: sql`true`
-    }),
-
-    // RLS Policy - Allow anyone to insert feedback
-    pgPolicy('anyone_can_insert_feedback', {
-      for: 'insert',
-      to: 'public',
-      withCheck: sql`true`
-    })
+    index('feedback_created_at_idx').on(table.createdAt)
   ]
-).enableRLS()
+)
 
 export type Feedback = InferSelectModel<typeof feedback>

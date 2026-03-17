@@ -1,13 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-import { PutObjectCommand } from '@aws-sdk/client-s3'
-
 import { getCurrentUserId } from '@/lib/auth/get-current-user'
-import {
-  getR2Client,
-  R2_BUCKET_NAME,
-  R2_PUBLIC_URL
-} from '@/lib/storage/r2-client'
+import { saveFile } from '@/lib/storage/r2-client'
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf']
@@ -46,48 +40,32 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    const result = await uploadFileToR2(file, userId, chatId)
-    return NextResponse.json({ success: true, file: result }, { status: 200 })
+
+    const sanitizedFileName = file.name
+      .replace(/[^a-z0-9.\-_]/gi, '_')
+      .toLowerCase()
+    const filePath = `${userId}/chats/${chatId}/${Date.now()}-${sanitizedFileName}`
+    const buffer = Buffer.from(await file.arrayBuffer())
+
+    const publicUrl = await saveFile(buffer, filePath, file.type)
+
+    return NextResponse.json(
+      {
+        success: true,
+        file: {
+          filename: file.name,
+          url: publicUrl,
+          mediaType: file.type,
+          type: 'file'
+        }
+      },
+      { status: 200 }
+    )
   } catch (err: any) {
     console.error('Upload Error:', err)
     return NextResponse.json(
       { error: 'Upload failed', message: err.message },
       { status: 500 }
     )
-  }
-}
-
-function sanitizeFilename(filename: string) {
-  return filename.replace(/[^a-z0-9.\-_]/gi, '_').toLowerCase()
-}
-
-async function uploadFileToR2(file: File, userId: string, chatId: string) {
-  const sanitizedFileName = sanitizeFilename(file.name)
-  const filePath = `${userId}/chats/${chatId}/${Date.now()}-${sanitizedFileName}`
-
-  try {
-    const buffer = Buffer.from(await file.arrayBuffer())
-    const r2Client = getR2Client()
-
-    await r2Client.send(
-      new PutObjectCommand({
-        Bucket: R2_BUCKET_NAME,
-        Key: filePath,
-        Body: buffer,
-        ContentType: file.type,
-        CacheControl: 'max-age=3600'
-      })
-    )
-
-    const publicUrl = `${R2_PUBLIC_URL}/${filePath}`
-
-    return {
-      filename: file.name,
-      url: publicUrl,
-      mediaType: file.type,
-      type: 'file'
-    }
-  } catch (error: any) {
-    throw new Error('Upload failed: ' + error.message)
   }
 }

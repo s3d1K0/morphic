@@ -14,9 +14,11 @@ function IconLogo({ className, ...props }: React.ComponentProps<'svg'>) {
       className={cn('h-4 w-4', className)}
       {...props}
     >
-      <circle cx="128" cy="128" r="128" fill="black"></circle>
-      <circle cx="102" cy="128" r="18" fill="white"></circle>
-      <circle cx="154" cy="128" r="18" fill="white"></circle>
+      <circle cx="128" cy="128" r="128" fill="black" />
+      <ellipse cx="128" cy="128" rx="52" ry="52" fill="white" />
+      <circle cx="128" cy="128" r="28" fill="#1a1a2e" />
+      <circle cx="128" cy="128" r="16" fill="black" />
+      <circle cx="120" cy="120" r="6" fill="white" opacity="0.8" />
     </svg>
   )
 }
@@ -50,80 +52,54 @@ function IconBlinkingLogo({
   ...props
 }: React.ComponentProps<'svg'>) {
   const svgRef = useRef<SVGSVGElement>(null)
+  const irisRef = useRef<SVGGElement>(null)
+  const eyelidRef = useRef<SVGEllipseElement>(null)
 
   useEffect(() => {
-    const blinkElements = document.querySelectorAll('.blink')
-    const initialPositions = Array.from(blinkElements).map(el => ({
-      cx: parseFloat(el.getAttribute('cx') || '0'),
-      cy: parseFloat(el.getAttribute('cy') || '0')
-    }))
+    const iris = irisRef.current
+    const eyelid = eyelidRef.current
+    if (!iris || !eyelid) return
 
+    // Blink animation
     const triggerBlink = () => {
-      blinkElements.forEach(el => {
-        el.classList.add('animate-blink')
-        setTimeout(() => {
-          el.classList.remove('animate-blink')
-        }, 200)
-      })
+      const ry = eyelid.getAttribute('ry')
+      eyelid.setAttribute('ry', '4')
+      setTimeout(() => {
+        eyelid.setAttribute('ry', ry || '52')
+      }, 150)
     }
 
-    const randomInterval = () => Math.random() * 8000 + 2000
-
+    const randomInterval = () => Math.random() * 4000 + 2000
     let timeoutId: ReturnType<typeof setTimeout>
     const startBlinking = () => {
       triggerBlink()
       timeoutId = setTimeout(startBlinking, randomInterval())
     }
-
     startBlinking()
 
+    // Mouse tracking
     const handleMove = (clientX: number, clientY: number) => {
-      if (svgRef.current) {
-        const rect = svgRef.current.getBoundingClientRect()
-        const mouseX = clientX - rect.left - rect.width / 2 - 256
-        const mouseY = clientY - rect.top - rect.height / 2
+      if (!svgRef.current) return
+      const rect = svgRef.current.getBoundingClientRect()
+      const centerX = rect.left + rect.width / 2
+      const centerY = rect.top + rect.height / 2
 
-        const maxMove = 60
+      const dx = clientX - centerX
+      const dy = clientY - centerY
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      const maxMove = 16
+      const factor = Math.min(dist / 200, 1) * maxMove
 
-        blinkElements.forEach((el, index) => {
-          const { cx, cy } = initialPositions[index]
-          const targetDx = Math.min((mouseX - cx) * 0.1, maxMove)
-          const targetDy = Math.min((mouseY - cy) * 0.1, maxMove)
+      const moveX = (dx / (dist || 1)) * factor
+      const moveY = (dy / (dist || 1)) * factor
 
-          let velocityX = 0
-          let velocityY = 0
-          const damping = 0.05
-
-          const animate = () => {
-            const currentCx = parseFloat(el.getAttribute('cx') || '0')
-            const currentCy = parseFloat(el.getAttribute('cy') || '0')
-
-            const dx = (targetDx - (currentCx - cx)) * 0.1
-            const dy = (targetDy - (currentCy - cy)) * 0.1
-
-            velocityX = velocityX * damping + dx
-            velocityY = velocityY * damping + dy
-
-            el.setAttribute('cx', (currentCx + velocityX).toString())
-            el.setAttribute('cy', (currentCy + velocityY).toString())
-
-            if (Math.abs(velocityX) > 0.1 || Math.abs(velocityY) > 0.1) {
-              requestAnimationFrame(animate)
-            }
-          }
-
-          requestAnimationFrame(animate)
-        })
-      }
+      iris.setAttribute('transform', `translate(${moveX}, ${moveY})`)
     }
 
-    const handleMouseMove = (event: MouseEvent) => {
-      handleMove(event.clientX, event.clientY)
-    }
-
-    const handleTouchMove = (event: TouchEvent) => {
-      if (event.touches.length > 0) {
-        handleMove(event.touches[0].clientX, event.touches[0].clientY)
+    const handleMouseMove = (e: MouseEvent) => handleMove(e.clientX, e.clientY)
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0) {
+        handleMove(e.touches[0].clientX, e.touches[0].clientY)
       }
     }
 
@@ -147,23 +123,30 @@ function IconBlinkingLogo({
       className={cn('h-4 w-4', className)}
       {...props}
     >
-      <circle cx="128" cy="128" r="128" fill="#222"></circle>
+      <circle cx="128" cy="128" r="128" fill="#222" />
+      <clipPath id="eyelid-clip">
+        <ellipse
+          ref={eyelidRef}
+          cx="128"
+          cy="128"
+          rx="52"
+          ry="52"
+          style={{ transition: 'ry 0.15s ease-in-out' }}
+        />
+      </clipPath>
       <ellipse
-        cx="102"
+        cx="128"
         cy="128"
-        rx="18"
-        ry="18"
+        rx="52"
+        ry="52"
         fill="white"
-        className="blink"
-      ></ellipse>
-      <ellipse
-        cx="154"
-        cy="128"
-        rx="18"
-        ry="18"
-        fill="white"
-        className="blink"
-      ></ellipse>
+        clipPath="url(#eyelid-clip)"
+      />
+      <g ref={irisRef} clipPath="url(#eyelid-clip)">
+        <circle cx="128" cy="128" r="28" fill="#1a1a2e" />
+        <circle cx="128" cy="128" r="16" fill="black" />
+        <circle cx="120" cy="120" r="6" fill="white" opacity="0.8" />
+      </g>
     </svg>
   )
 }

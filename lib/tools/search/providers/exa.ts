@@ -1,5 +1,3 @@
-import Exa from 'exa-js'
-
 import { SearchResults } from '@/lib/types'
 
 import { BaseSearchProvider } from './base'
@@ -12,26 +10,13 @@ export class ExaSearchProvider extends BaseSearchProvider {
     includeDomains: string[] = [],
     excludeDomains: string[] = []
   ): Promise<SearchResults> {
-    const apiKey = process.env.EXA_API_KEY
-    this.validateApiKey(apiKey, 'EXA')
-
-    const exa = new Exa(apiKey)
-    const exaResults = await exa.searchAndContents(query, {
-      highlights: true,
-      numResults: maxResults,
-      includeDomains,
-      excludeDomains
-    })
-
+    // Exa provider removed (exa-js dependency removed)
+    // Return empty results
     return {
-      results: exaResults.results.map((result: any) => ({
-        title: result.title,
-        url: result.url,
-        content: result.highlight || result.text
-      })),
+      results: [],
       query,
       images: [],
-      number_of_results: exaResults.results.length
+      number_of_results: 0
     }
   }
 }

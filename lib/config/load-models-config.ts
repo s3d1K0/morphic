@@ -1,4 +1,3 @@
-import cloudConfig from '@/config/models/cloud.json'
 import defaultConfig from '@/config/models/default.json'
 
 import { ModelType } from '@/lib/types/model-type'
@@ -14,7 +13,6 @@ export interface ModelsConfig {
 }
 
 let cachedConfig: ModelsConfig | null = null
-let cachedProfile: string | null = null
 
 const VALID_MODEL_TYPES: ModelType[] = ['speed', 'quality']
 const VALID_SEARCH_MODES: SearchMode[] = ['quick', 'adaptive']
@@ -60,39 +58,25 @@ function validateModelsConfigStructure(
 }
 
 export async function loadModelsConfig(): Promise<ModelsConfig> {
-  const profile =
-    process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true' ? 'cloud' : 'default'
-
-  if (cachedConfig && cachedProfile === profile) {
+  if (cachedConfig) {
     return cachedConfig
   }
 
-  const config = profile === 'cloud' ? cloudConfig : defaultConfig
-  validateModelsConfigStructure(config)
-
-  cachedConfig = config as ModelsConfig
-  cachedProfile = profile
+  validateModelsConfigStructure(defaultConfig)
+  cachedConfig = defaultConfig as ModelsConfig
   return cachedConfig
 }
 
-// Synchronous load (for code paths that need sync access)
 export function loadModelsConfigSync(): ModelsConfig {
-  const profile =
-    process.env.MORPHIC_CLOUD_DEPLOYMENT === 'true' ? 'cloud' : 'default'
-
-  if (cachedConfig && cachedProfile === profile) {
+  if (cachedConfig) {
     return cachedConfig
   }
 
-  const config = profile === 'cloud' ? cloudConfig : defaultConfig
-  validateModelsConfigStructure(config)
-
-  cachedConfig = config as ModelsConfig
-  cachedProfile = profile
+  validateModelsConfigStructure(defaultConfig)
+  cachedConfig = defaultConfig as ModelsConfig
   return cachedConfig
 }
 
-// Public accessor that ensures a config is available synchronously
 export function getModelsConfig(): ModelsConfig {
   if (!cachedConfig) {
     return loadModelsConfigSync()

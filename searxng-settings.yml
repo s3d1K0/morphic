@@ -20,7 +20,7 @@ server:
   # Proxy image results through SearXNG. Is overwritten by ${SEARXNG_IMAGE_PROXY}
   image_proxy: false
   # 1.0 and 1.1 are supported
-  http_protocol_version: '1.0'
+  http_protocol_version: '1.1'
   # POST queries are more secure as they don't show up in history but may cause
   # problems when using Firefox containers
   method: 'POST'

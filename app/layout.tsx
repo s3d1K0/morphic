@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter as FontSans } from 'next/font/google'
 
-import { Analytics } from '@vercel/analytics/next'
-
 import { UserProvider } from '@/lib/contexts/user-context'
-import { createClient } from '@/lib/supabase/server'
 import { cn } from '@/lib/utils'
 
 import { SidebarProvider } from '@/components/ui/sidebar'
@@ -22,23 +19,15 @@ const fontSans = FontSans({
   variable: '--font-sans'
 })
 
-const title = 'Morphic'
-const description =
-  'A fully open-source AI-powered answer engine with a generative UI.'
+const title = 'VISION'
+const description = 'AI-powered research engine with Eagle orchestrator.'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://morphic.sh'),
   title,
   description,
   openGraph: {
     title,
     description
-  },
-  twitter: {
-    title,
-    description,
-    card: 'summary_large_image',
-    creator: '@miiura'
   }
 }
 
@@ -54,18 +43,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
-  let user = null
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (supabaseUrl && supabaseAnonKey) {
-    const supabase = await createClient()
-    const {
-      data: { user: supabaseUser }
-    } = await supabase.auth.getUser()
-    user = supabaseUser
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <body
@@ -80,11 +57,11 @@ export default async function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <UserProvider hasUser={!!user}>
+          <UserProvider>
             <SidebarProvider defaultOpen={false}>
-              {user && <AppSidebar />}
+              <AppSidebar />
               <div className="flex flex-col flex-1 min-w-0">
-                <Header user={user} />
+                <Header />
                 <main className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
                   <ArtifactRoot>{children}</ArtifactRoot>
                 </main>
@@ -92,7 +69,6 @@ export default async function RootLayout({
             </SidebarProvider>
           </UserProvider>
           <Toaster />
-          <Analytics />
         </ThemeProvider>
       </body>
     </html>
